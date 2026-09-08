@@ -171,9 +171,7 @@ elif menu == "📊 Painel de Controle":
     
     st.subheader("📦 Consulta de Inventário (Saldos Atuais)")
     busca_produto = st.text_input("🔍 Pesquisar Produto (Digite o Código de Barras ou Nome do Item):")
-    Aqui está o código completo, único e unificado. Eu revisei linha por linha para garantir que ele esteja no padrão exato exigido pelo Python e pelo Streamlit, sem nenhuma quebra de formato.
-Vá no seu GitHub, abra o arquivo app.py, clique para editar, apague absolutamente tudo o que estiver lá dentro (deixe o arquivo 100% em branco) e cole este bloco de ponta a ponta:
-
+    
 import streamlit as stimport pandas as pdfrom datetime import datetimeimport iofrom reportlab.lib.pagesizes import letterfrom reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStylefrom reportlab.lib import colorsfrom reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 # Configuração da página do aplicativo
 st.set_page_config(page_title="Controle de Estoque Inteligente", layout="wide", page_icon="📦")
