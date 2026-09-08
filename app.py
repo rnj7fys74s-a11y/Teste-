@@ -157,7 +157,7 @@ elif menu == "📤 Requisição de Saída":
             st.error("Código de barras não localizado no cadastro do sistema.")
 
 # ==========================================
-# TELA 3: PAINEL DE CONTROLE (SEM FUNÇÕES EXTERNAS)
+# TELA 3: PAINEL DE CONTROLE (COM FILTROS)
 # ==========================================
 elif menu == "📊 Painel de Controle":
     st.header("📊 Ambiente de Controle, Saldos e Auditoria")
@@ -173,5 +173,5 @@ elif menu == "📊 Painel de Controle":
             (df_estoque_filtrado['CodigoBarras'].astype(str).str.contains(busca_produto, case=False)) |
             (df_estoque_filtrado['Nome'].str.contains(busca_produto, case=False))
         ]
-        
-    if df_estoque_filtrado.empty:
+    
+    def destacar_criticos(row):
