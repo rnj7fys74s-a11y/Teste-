@@ -18,9 +18,9 @@ if "historico_notas" not in st.session_state:
 
 if "movimentacao_estoque" not in st.session_state:
     st.session_state.movimentacao_estoque = pd.DataFrame([
-        {"Tipo": "Entrada", "CodigoBarras": "7891000101", "Quantidade": 50, "ValorUnitario": 2.50, "NumeroNota": "123", "QuemRetirou": "-", "AutorizadoPor": "-", "OperadorAlmoxarifado": "sistema@empresa.com", "Data": "2026-03-01 10:00:00"},
-        {"Tipo": "Entrada", "CodigoBarras": "7891000102", "Quantidade": 15, "ValorUnitario": 45.00, "NumeroNota": "124", "QuemRetirou": "-", "AutorizadoPor": "-", "OperadorAlmoxarifado": "sistema@empresa.com", "Data": "2026-03-02 11:30:00"},
-        {"Tipo": "Entrada", "CodigoBarras": "7891000103", "Quantidade": 5, "ValorUnitario": 12.90, "NumeroNota": "125", "QuemRetirou": "-", "AutorizadoPor": "-", "OperadorAlmoxarifado": "sistema@empresa.com", "Data": "2026-03-03 14:15:00"}
+        {"Tipo": "Entrada", "CodigoBarras": "7891000101", "Quantidade": 50, "ValorUnitario": 2.50, "NumeroNota": "123", "Data": "2026-03-01"},
+        {"Tipo": "Entrada", "CodigoBarras": "7891000102", "Quantidade": 15, "ValorUnitario": 45.00, "NumeroNota": "124", "Data": "2026-03-02"},
+        {"Tipo": "Entrada", "CodigoBarras": "7891000103", "Quantidade": 5, "ValorUnitario": 12.90, "NumeroNota": "125", "Data": "2026-03-03"}
     ])
 
 if "col_temporaria_entrada" not in st.session_state:
@@ -30,7 +30,7 @@ if "col_temporaria_entrada" not in st.session_state:
 st.title("📦 Sistema Ativo de Almoxarifado")
 st.markdown("---")
 
-# MENU DE NAVEGAÇÃO LATERAL
+# MENU DE NAVEGAÇÃO LATERAL (Simula as telas do aplicativo)
 menu = st.sidebar.radio("Selecione a Tela:", ["📥 Entrada por NF-e", "📤 Requisição de Saída", "📊 Painel de Controle"])
 
 # ==========================================
@@ -39,6 +39,7 @@ menu = st.sidebar.radio("Selecione a Tela:", ["📥 Entrada por NF-e", "📤 Req
 if menu == "📥 Entrada por NF-e":
     st.header("Lançamento Manual de Notas Fiscais")
     
+    # Cabeçalho da Nota
     col1, col2, col3 = st.columns(3)
     with col1:
         txt_nota = st.text_input("Número da NF-e")
@@ -49,7 +50,7 @@ if menu == "📥 Entrada por NF-e":
         
     st.markdown("### Adicionar Itens à Nota (Use o Coletor no campo de Código)")
     
-    col_item1, col_item2, col_item3 = st.columns(3)
+    col_item1, col_item2, col_item3 = st.columns([2, 1, 1])
     with col_item1:
         txt_codigo_barras = st.text_input("Código de Barras do Produto", key="input_codigo_entrada")
     with col_item2:
@@ -69,28 +70,28 @@ if menu == "📥 Entrada por NF-e":
         else:
             st.error("Por favor, preencha o número da nota e o código de barras.")
 
+    # Exibe a lista temporária antes de salvar definitivamente
     if st.session_state.col_temporaria_entrada:
         st.markdown("#### Itens Prontos para Entrada")
         df_temp = pd.DataFrame(st.session_state.col_temporaria_entrada)
         st.dataframe(df_temp, use_container_width=True)
         
         if st.button("💾 CONFIRMAR ENTRADA NO ESTOQUE"):
+            # 1. Salva cabeçalho da nota
             nova_nota = {"NumeroNota": txt_nota, "Fornecedor": txt_fornecedor, "NumeroRequisicao": txt_requisicao_compra, "DataRegistro": datetime.now().strftime("%Y-%m-%d")}
             st.session_state.historico_notas = pd.concat([st.session_state.historico_notas, pd.DataFrame([nova_nota])], ignore_index=True)
             
+            # 2. Processa itens, histórico e atualiza saldos
             for item in st.session_state.col_temporaria_entrada:
-                mov = {
-                    "Tipo": "Entrada", "CodigoBarras": item["CodigoBarras"], "Quantidade": item["Quantidade"], 
-                    "ValorUnitario": item["ValorUnitario"], "NumeroNota": txt_nota, "QuemRetirou": "-", 
-                    "AutorizadoPor": "-", "OperadorAlmoxarifado": "usuario_logado@empresa.com", "Data": item["Data"]
-                }
+                mov = {"Tipo": "Entrada", "CodigoBarras": item["CodigoBarras"], "Quantidade": item["Quantidade"], "ValorUnitario": item["ValorUnitario"], "NumeroNota": txt_nota, "Data": item["Data"]}
                 st.session_state.movimentacao_estoque = pd.concat([st.session_state.movimentacao_estoque, pd.DataFrame([mov])], ignore_index=True)
                 
+                # Atualiza Saldo Atual ou Cria se não existir
                 idx = st.session_state.cadastro_produtos[st.session_state.cadastro_produtos['CodigoBarras'] == item["CodigoBarras"]].index
                 if not idx.empty:
                     st.session_state.cadastro_produtos.loc[idx, 'SaldoAtual'] += item["Quantidade"]
                 else:
-                    novo_prod = {"CodigoBarras": item["CodigoBarras"], "Nome": f"Produto Novo ({item['CodigoBarras']})", "SaldoAtual": item["Quantidade"], "EstoqueMinimo": 5}
+                    novo_prod = {"CodigoBarras": item["CodigoBarras"], "Nome": "Produto Novo Cadastrado", "SaldoAtual": item["Quantidade"], "EstoqueMinimo": 5}
                     st.session_state.cadastro_produtos = pd.concat([st.session_state.cadastro_produtos, pd.DataFrame([novo_prod])], ignore_index=True)
             
             st.session_state.col_temporaria_entrada = []
@@ -114,18 +115,21 @@ elif menu == "📤 Requisição de Saída":
     txt_codigo_saida = st.text_input("Bipe o Código de Barras do Produto", key="input_codigo_saida")
     
     if txt_codigo_saida:
+        # Busca o produto correspondente
         prod_filtrado = st.session_state.cadastro_produtos[st.session_state.cadastro_produtos['CodigoBarras'] == txt_codigo_saida]
         
         if not prod_filtrado.empty:
             nome_prod = prod_filtrado.iloc[0]['Nome']
             saldo_prod = prod_filtrado.iloc[0]['SaldoAtual']
             
+            # Busca do Último Valor Pago de Forma Automática
             historico_entradas = st.session_state.movimentacao_estoque[
                 (st.session_state.movimentacao_estoque['CodigoBarras'] == txt_codigo_saida) & 
                 (st.session_state.movimentacao_estoque['Tipo'] == "Entrada")
             ]
             ultimo_preco = historico_entradas.iloc[-1]['ValorUnitario'] if not historico_entradas.empty else 0.0
             
+            # Exibe as informações automáticas na tela
             st.info(f"📋 **Produto:** {nome_prod} | 📦 **Saldo Atual:** {saldo_prod} unidades | 💰 **Último Custo Pago:** R$ {ultimo_preco:.2f}")
             
             txt_qtd_saida = st.number_input("Quantidade para Retirada", min_value=1, step=1)
@@ -136,20 +140,21 @@ elif menu == "📤 Requisição de Saída":
                 elif txt_qtd_saida > saldo_prod:
                     st.error(f"Bloqueado: Saldo insuficiente! Você tentou retirar {txt_qtd_saida} mas só existem {saldo_prod} em estoque.")
                 else:
+                    # Efetua a baixa
                     idx = prod_filtrado.index
                     st.session_state.cadastro_produtos.loc[idx, 'SaldoAtual'] -= txt_qtd_saida
                     
+                    # Registra a movimentação
                     nova_saida = {
                         "Tipo": "Saida", "CodigoBarras": txt_codigo_saida, "Quantidade": txt_qtd_saida, 
                         "ValorUnitario": ultimo_preco, "NumeroNota": f"REQ-{txt_req_saida}", 
-                        "QuemRetirou": txt_quem_retirou, "AutorizadoPor": cmb_autorizado,
-                        "OperadorAlmoxarifado": "operador_almoxarifado@empresa.com",
                         "Data": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
                     st.session_state.movimentacao_estoque = pd.concat([st.session_state.movimentacao_estoque, pd.DataFrame([nova_saida])], ignore_index=True)
                     
                     st.success("Saída autorizada e registrada com sucesso!")
                     
+                    # Alerta Automático de Estoque Mínimo
                     novo_saldo = saldo_prod - txt_qtd_saida
                     if novo_saldo <= prod_filtrado.iloc[0]['EstoqueMinimo']:
                         st.warning(f"🚨 ATENÇÃO: O item '{nome_prod}' atingiu o estoque mínimo de segurança! Saldo restante: {novo_saldo}")
@@ -157,21 +162,19 @@ elif menu == "📤 Requisição de Saída":
             st.error("Código de barras não localizado no cadastro do sistema.")
 
 # ==========================================
-# TELA 3: PAINEL DE CONTROLE (COM FILTROS)
+# TELA 3: PAINEL DE CONTROLE
 # ==========================================
 elif menu == "📊 Painel de Controle":
-    st.header("📊 Ambiente de Controle, Saldos e Auditoria")
-    st.markdown("---")
+    st.header("Ambiente de Controle e Saldos")
     
-    st.subheader("📦 Consulta de Inventário (Saldos Atuais)")
-    busca_produto = st.text_input("🔍 Pesquisar Produto (Digite o Código de Barras ou Nome do Item):")
+    st.markdown("### Inventário Atualizado (Controle de Estoque Mínimo)")
     
-    df_estoque_filtrado = st.session_state.cadastro_produtos.copy()
-    
-    if busca_produto:
-        df_estoque_filtrado = df_estoque_filtrado[
-            (df_estoque_filtrado['CodigoBarras'].astype(str).str.contains(busca_produto, case=False)) |
-            (df_estoque_filtrado['Nome'].str.contains(busca_produto, case=False))
-        ]
-    
+    # Aplica estilização de aviso caso esteja abaixo do estoque mínimo
     def destacar_criticos(row):
+        return ['background-color: #ffcccc' if row['SaldoAtual'] <= row['EstoqueMinimo'] else '' for _ in row]
+        
+    df_estoque = st.session_state.cadastro_produtos.style.apply(destacar_criticos, axis=1)
+    st.dataframe(df_estoque, use_container_width=True)
+    
+    st.markdown("### Auditoria Geral de Movimentações (Entradas e Saídas)")
+    st.dataframe(st.session_state.movimentacao_estoque, use_container_width=True)
